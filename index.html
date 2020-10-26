@@ -1,0 +1,261 @@
+<!-- wechat: rains31, blog: http://rains.im, bbs: telnet://bbs.zt.vc -->
+<html>
+
+<head>
+  <title>Reversi 1.0 by Archer(z@zt.vc)</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <script src="/js/jquery.min.js"></script>
+  <style type="text/css">
+    #board {
+      font-family: Verdana;
+      border-collapse: collapse;
+      border: 10px solid black;
+      background-color: green;
+    }
+
+    #board td {
+      font-size: 50px;
+      border: 1px solid black;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 50px;
+      overflow: hidden;
+    }
+
+    #board th {
+      font-size: 20px;
+      border-width: 0px;
+      padding: 5px;
+    }
+
+    #white,
+    .w {
+      color: #fff;
+    }
+
+    #current {
+      font-size: 30px;
+    }
+
+    .valid_moves {
+      background-image: url("data:image/bmp;base64,Qk06AAAAAAAAADYAAAAoAAAAAQAAAAEAAAABABgAAAAAAAQAAAAnAAAAJwAAAAAAAAAAAAAA////AA");
+      background-repeat: no-repeat;
+      background-size: 5px;
+      background-position: center;
+    }
+  </style>
+</head>
+
+<body onselectstart="return false">
+  <h2></h2>
+  <table id="board">
+  </table>
+  <script type="text/javascript">
+    window.$$ = function (e) {
+      return document.getElementById(e)
+    };
+    window.onload = function () {
+      var size = 8;
+      var current = 1;
+      var $board = $$('board');
+      var cells = [];
+      var dot = '●';
+      var white = 2;
+      var black = 2;
+      var moves = [];
+      var gameover = 0;
+      function reverse(x, y) {
+        cells[x][y].className = cells[x][y].className == 'w' ? 'b' : 'w';
+        if (cells[x][y].className == 'w') {
+          white++;
+          black--;
+        } else {
+          white--;
+          black++;
+        }
+      }
+      function set(x, y, c) {
+        cells[x][y].innerHTML = dot;
+        cells[x][y].className = c ? 'b' : 'w';
+        var old_valid_moves = document.getElementsByClassName('valid_moves');
+        while (old_valid_moves.length) {
+          old_valid_moves[0].className = '';
+        }
+      }
+      function get(x, y) {
+        // 1=black,0=white
+        if (cells[x] && cells[x][y] && cells[x][y].innerHTML != '') {
+          return cells[x][y].className == 'b' ? 1 : 0;
+        }
+      }
+      function valid_move(x, y, move) {
+        var valid = 0;
+        var i, j, k;
+        var direction;
+        var pos;
+        for (i = x - 1; i < x + 2; i++) {
+          for (j = y - 1; j < y + 2; j++) {
+            direction = [i - x, j - y];
+            if (direction == [0, 0]) continue; //跳过自己
+            if (cells[i] != undefined
+              && cells[i][j] != undefined
+              && cells[i][j].innerHTML == dot
+              && cells[i][j].className != $$('current').className
+            ) {
+              //找到了相邻且异色的棋子
+              //console.log(String.fromCharCode(65+j),i+1,'异色')
+              pos = [i, j]
+              for (k = 0; k < size; k++) {
+                pos[0] += direction[0];
+                pos[1] += direction[1];
+                c = get(pos[0], pos[1])
+                if (c == current) {
+                  //这个方向需要进行翻转
+                  if (move) {
+                    while (k >= 0) {
+                      pos[0] -= direction[0];
+                      pos[1] -= direction[1];
+                      reverse(pos[0], pos[1]);
+                      k--;
+                    }
+                  }
+                  valid = 1;
+                  break;
+                }
+                if (c == undefined) {
+                  break;
+                }
+              }
+            }
+          }
+        }
+        return valid;
+      }
+      function show_valid_moves() {
+        var i, j, x, y, valid;
+        for (x = 0; x < size; x++) {
+          for (y = 0; y < size; y++) {
+            //先找异色棋子
+            if (cells[x][y].innerHTML == dot
+              && cells[x][y].className != $$('current').className
+            ) {
+              //找到了相邻且异色的棋子
+              //console.log(String.fromCharCode(65+y),x+1,'异色,开始检查周边空位')
+              for (i = x - 1; i < x + 2; i++) {
+                for (j = y - 1; j < y + 2; j++) {
+                  if (i == x && j == y) continue; //跳过自己
+                  if (cells[i] != undefined
+                    && cells[i][j] != undefined
+                    && cells[i][j].innerHTML == '') {
+                    if (valid_move(i, j, false)) {
+                      cells[i][j].className = 'valid_moves'
+                      valid = 1;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        return valid;
+      }
+      function move(x, y) {
+        if (x == undefined || y == undefined || cells[x][y].innerHTML != '') {
+          //坐标无效或格子非空，都不能下
+          return false;
+        }
+        var direction = [0, 0];
+        var valid = valid_move(x, y, true);
+        if (valid) {
+          console.log('落子:', String.fromCharCode(65 + y), x + 1)
+          if (current) {
+            black++;
+          } else {
+            white++;
+          }
+          $$('white').innerHTML = white;
+          $$('black').innerHTML = black;
+          set(x, y, current)
+          current = 1 - current;
+          $$('current').className = current ? 'b' : 'w';
+        }
+        if (!show_valid_moves()) {
+          current = 1 - current;
+          $$('current').className = current ? 'b' : 'w';
+        }
+        if (!show_valid_moves()) {
+          $board.gameover();
+        }
+      }
+      function init() {
+        $board.innerHTML = '<tr><th colspan="' + (size + 2) + '">' + document.title + '</th></tr>';
+        var ruler = '<tr><th></th>';
+        for (i = 0; i < size; i++) {
+          ruler += '<th>' + String.fromCharCode(65 + i) + '</th>';
+        }
+        ruler += '<th></th></tr>';
+        $board.innerHTML += ruler;
+        for (i = 0; i < size; i++) {
+          var tr = '<tr>';
+          tr += '<th>' + (i + 1) + '</th>';
+          for (j = 0; j < size; j++) {
+            tr += '<td class="b" id="' + String.fromCharCode(65 + i) + (j + 1) + '"></td>';
+          }
+          tr += '<th>' + (i + 1) + '</th>';
+          tr += '</tr>';
+          $board.innerHTML += tr;
+        }
+        $board.innerHTML += ruler;
+        $board.innerHTML += '<tr><th colspan="' + (size + 2) + '">'
+          + '<span id="status">Current Move: <span id="current" class="b">' + dot + '</span></span>'
+          + '<br/>Score: <b id="black">2</b> : <b id="white">2</b>'
+          + '</th></tr>';
+        for (x = 0; x < size; x++) {
+          cells[x] = []
+          for (y = 0; y < size; y++) {
+            cells[x][y] = $$(String.fromCharCode(65 + y) + (x + 1));
+            cells[x][y].x = x
+            cells[x][y].y = y
+          }
+        }
+        set(3, 3, 0);
+        set(3, 4, 1);
+        set(4, 4, 0);
+        set(4, 3, 1);
+        $$('current').className = current ? 'b' : 'w';
+        show_valid_moves();
+      }
+      $board.status = function (msg) {
+        $$('status').innerHTML = msg;
+      }
+      $board.gameover = function () {
+        var status = '';
+        gameover = 1;
+        if (black > white) {
+          status = 'black win!'
+        }
+        else if (black < white) {
+          status = 'white win!'
+        } else {
+          status = 'draw game!'
+        }
+        $board.status(status);
+      }
+      $board.onclick = function (e) {
+        if (gameover) {
+          if (confirm('Game is over, try again?')) {
+            window.location.reload();
+          }
+          return;
+        }
+        e = e || event
+        move(e.target.x, e.target.y);
+      }
+      init();
+    };
+  </script>
+</body>
+
+</html>
